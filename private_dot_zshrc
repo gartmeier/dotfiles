@@ -1,0 +1,40 @@
+# Paths
+export BUN_INSTALL="$HOME/.bun"
+export PNPM_HOME="/home/joshua/.local/share/pnpm"
+
+export PATH="$PNPM_HOME:$BUN_INSTALL:$PATH"
+
+# Oh My Zsh
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME="joshua"
+
+plugins=(git terraform zsh-autosuggestions zsh-syntax-highlighting)
+
+source $ZSH/oh-my-zsh.sh
+
+# User configuration
+export EDITOR=nvim
+
+# Aliases
+alias claude="/home/joshua/.claude/local/claude"
+alias open="xdg-open"
+alias tfa="terraform apply tfplan"
+alias tfp="terraform plan -out tfplan"
+
+# Kitty SSH
+# https://wiki.archlinux.org/title/Kitty#Terminal_issues_with_SSH
+[ "$TERM" = "xterm-kitty" ] && alias ssh="kitty +kitten ssh"
+
+# Bun Completions
+[ -s "/home/joshua/.bun/_bun" ] && source "/home/joshua/.bun/_bun"
+
+# Scripts
+export PATH="$HOME/.local/bin:$PATH"
+
+# Zoxide
+eval "$(zoxide init --cmd cd zsh)"
+
+# Sessionizer
+bindkey -s ^f "tmux-sessionizer\n"
+
