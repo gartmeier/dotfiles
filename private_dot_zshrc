@@ -1,6 +1,6 @@
 # Paths
 export BUN_INSTALL="$HOME/.bun"
-export LOCAL_BIN_PATH ="$HOME/.local/bin"
+export LOCAL_BIN_PATH="$HOME/.local/bin"
 export PNPM_HOME="/home/joshua/.local/share/pnpm"
 
 export PATH="$LOCAL_BIN_PATH:$PNPM_HOME:$BUN_INSTALL:$PATH"
@@ -22,6 +22,7 @@ alias claude="/home/joshua/.claude/local/claude"
 alias open="xdg-open"
 alias tfa="terraform apply tfplan"
 alias tfp="terraform plan -out tfplan"
+alias tt="toggle-theme"
 
 # Shell Completions
 [ -s "/home/joshua/.bun/_bun" ] && source "/home/joshua/.bun/_bun"
