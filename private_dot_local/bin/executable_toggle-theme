@@ -20,7 +20,7 @@ if [[ "$GNOME_THEME" == "'prefer-light'" ]]; then
     sed -i 's/catppuccin-latte/catppuccin-mocha/g' "$KITTY_CONFIG"
     
     # Update tmux
-    sed -i 's/catppuccin-latte/catppuccin-mocha/g' "$TMUX_CONFIG"
+    sed -i 's/latte/mocha/g' "$TMUX_CONFIG"
     
     echo "Switched to catppuccin-mocha (dark)"
 else
@@ -34,7 +34,7 @@ else
     sed -i 's/catppuccin-mocha/catppuccin-latte/g' "$KITTY_CONFIG"
     
     # Update tmux
-    sed -i 's/catppuccin-mocha/catppuccin-latte/g' "$TMUX_CONFIG"
+    sed -i 's/mocha/latte/g' "$TMUX_CONFIG"
     
     echo "Switched to catppuccin-latte (light)"
 fi
