@@ -23,6 +23,5 @@ else
 fi
 
 # Reload tmux config
-tmux source-file "$TMUX_CONFIG" 2>/dev/null && echo "Tmux config reloaded"
+tmux source-file "$TMUX_CONFIG" 2>/dev/null
 
-echo "Theme toggle complete!"
