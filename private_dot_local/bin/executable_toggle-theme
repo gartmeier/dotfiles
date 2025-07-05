@@ -3,47 +3,24 @@
 # Theme toggle script for kitty and tmux
 # Switches between catppuccin-latte (light) and catppuccin-mocha (dark)
 
-KITTY_CONFIG="$HOME/.config/kitty/kitty.conf"
 TMUX_CONFIG="$HOME/.config/tmux/tmux.conf"
 
 # Check current Gnome theme preference
 GNOME_THEME=$(gsettings get org.gnome.desktop.interface color-scheme)
 
 if [[ "$GNOME_THEME" == "'prefer-light'" ]]; then
-    # Currently light, switch to dark
-    echo "Switching to dark theme..."
-    
     # Update Gnome
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
     
-    # Update kitty
-    sed -i 's/catppuccin-latte/catppuccin-mocha/g' "$KITTY_CONFIG"
-    
     # Update tmux
     sed -i 's/latte/mocha/g' "$TMUX_CONFIG"
-    
-    echo "Switched to catppuccin-mocha (dark)"
 else
-    # Currently dark or default, switch to light
-    echo "Switching to light theme..."
-    
     # Update Gnome
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-light'
     
-    # Update kitty
-    sed -i 's/catppuccin-mocha/catppuccin-latte/g' "$KITTY_CONFIG"
-    
     # Update tmux
     sed -i 's/mocha/latte/g' "$TMUX_CONFIG"
-    
-    echo "Switched to catppuccin-latte (light)"
 fi
-
-# Reload configurations
-echo "Reloading configurations..."
-
-# Reload kitty config in all instances
-killall -USR1 kitty 2>/dev/null
 
 # Reload tmux config
 tmux source-file "$TMUX_CONFIG" 2>/dev/null && echo "Tmux config reloaded"

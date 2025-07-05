@@ -18,7 +18,6 @@ source $ZSH/oh-my-zsh.sh
 export EDITOR=nvim
 
 # Aliases
-alias claude="/home/joshua/.claude/local/claude"
 alias open="xdg-open"
 alias tfa="terraform apply tfplan"
 alias tfp="terraform plan -out tfplan"
