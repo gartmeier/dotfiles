@@ -1,0 +1,151 @@
+#!/bin/bash
+
+LOGFILE="$HOME/.pomodoro_log"
+
+show_help() {
+    cat << EOF
+Pomodoro Timer with Worklog
+
+Usage:
+  pomodoro [minutes] [task description]   Start a pomodoro timer
+  pomodoro summary [date]                 Show daily summary
+  pomodoro log [date]                     Show raw log for date
+  pomodoro week [start_date]              Show weekly summary
+  pomodoro help                           Show this help
+
+Examples:
+  pomodoro                                25-min "Focused work"
+  pomodoro 15 "Code review"               15-min with custom task
+  pomodoro summary                        Today's summary
+  pomodoro summary 2025-07-20             Specific date summary
+  pomodoro week                           This week's summary
+
+EOF
+}
+
+start_timer() {
+    local minutes=${1:-25}
+    local task="${2:-Focused work}"
+    local date=$(date '+%Y-%m-%d')
+    local start_time=$(date '+%H:%M')
+    local total_seconds=$((minutes * 60))
+    
+    echo "🍅 Starting ${minutes}-min pomodoro: $task"
+    
+    # Progress bar countdown
+    for ((i=total_seconds; i>=0; i--)); do
+        local percent=$(((total_seconds - i) * 100 / total_seconds))
+        local bars=$((percent / 2))
+        local spaces=$((50 - bars))
+        
+        printf "\r[%s%s] %d%% - %02d:%02d remaining" \
+            "$(printf '%*s' "$bars" | tr ' ' '=')" \
+            "$(printf '%*s' "$spaces")" \
+            "$percent" \
+            "$((i / 60))" \
+            "$((i % 60))"
+        
+        sleep 1
+    done
+    
+    echo ""
+    local end_time=$(date '+%H:%M')
+    
+    # Log the completed pomodoro
+    echo "$date,$start_time,$end_time,$minutes,$task" >> "$LOGFILE"
+    
+    # Play sound and notify
+    paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &
+    notify-send -u critical "🍅 Pomodoro Complete" "$task finished!"
+}
+
+show_summary() {
+    local date=${1:-$(date '+%Y-%m-%d')}
+    
+    if [[ ! -f "$LOGFILE" ]]; then
+        echo "No pomodoro log found."
+        return
+    fi
+    
+    echo "📊 Pomodoro Summary for $date"
+    echo "================================"
+    
+    local today_entries=$(grep "^$date," "$LOGFILE")
+    
+    if [[ -z "$today_entries" ]]; then
+        echo "No pomodoros completed on $date."
+        return
+    fi
+    
+    local total_pomodoros=$(echo "$today_entries" | wc -l)
+    local total_minutes=$(echo "$today_entries" | cut -d',' -f4 | awk '{sum+=$1} END {print sum}')
+    
+    echo "Total pomodoros: $total_pomodoros"
+    echo "Total time: $total_minutes minutes ($(echo "scale=1; $total_minutes/60" | bc 2>/dev/null || echo "$((total_minutes/60))")h)"
+    echo ""
+    echo "Tasks completed:"
+    echo "$today_entries" | while IFS=',' read -r date start end mins task; do
+        echo "  • $start-$end ($mins min): $task"
+    done
+}
+
+show_log() {
+    local date=${1:-$(date '+%Y-%m-%d')}
+    
+    if [[ ! -f "$LOGFILE" ]]; then
+        echo "No pomodoro log found."
+        return
+    fi
+    
+    echo "Raw log for $date:"
+    echo "Date,Start,End,Minutes,Task"
+    echo "=========================="
+    grep "^$date," "$LOGFILE" | column -t -s',' 2>/dev/null || grep "^$date," "$LOGFILE"
+}
+
+show_week() {
+    local start_date=${1:-$(date -d 'monday' '+%Y-%m-%d' 2>/dev/null || date '+%Y-%m-%d')}
+    
+    if [[ ! -f "$LOGFILE" ]]; then
+        echo "No pomodoro log found."
+        return
+    fi
+    
+    echo "📈 Weekly Summary starting $start_date"
+    echo "======================================"
+    
+    for i in {0..6}; do
+        local check_date=$(date -d "$start_date + $i days" '+%Y-%m-%d' 2>/dev/null || echo "$start_date")
+        local day_name=$(date -d "$check_date" '+%A' 2>/dev/null || echo "Day $((i+1))")
+        local count=$(grep "^$check_date," "$LOGFILE" 2>/dev/null | wc -l)
+        local minutes=$(grep "^$check_date," "$LOGFILE" 2>/dev/null | cut -d',' -f4 | awk '{sum+=$1} END {print sum+0}')
+        
+        printf "%-10s: %2d pomodoros (%3d min)\n" "$day_name" "$count" "$minutes"
+    done
+}
+
+# Main script logic
+case "$1" in
+    "help"|"-h"|"--help")
+        show_help
+        ;;
+    "summary")
+        show_summary "$2"
+        ;;
+    "log")
+        show_log "$2"
+        ;;
+    "week")
+        show_week "$2"
+        ;;
+    "")
+        start_timer 25 "Focused work"
+        ;;
+    *)
+        if [[ "$1" =~ ^[0-9]+$ ]]; then
+            start_timer "$1" "${*:2}"
+        else
+            start_timer 25 "$*"
+        fi
+        ;;
+esac
