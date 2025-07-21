@@ -8,6 +8,7 @@ Pomodoro Timer with Worklog
 
 Usage:
   pomodoro [minutes] [task description]   Start a pomodoro timer
+  pomodoro break [minutes]                Start a break timer
   pomodoro summary [date]                 Show daily summary
   pomodoro log [date]                     Show raw log for date
   pomodoro week [start_date]              Show weekly summary
@@ -16,11 +17,43 @@ Usage:
 Examples:
   pomodoro                                25-min "Focused work"
   pomodoro 15 "Code review"               15-min with custom task
+  pomodoro break                          5-min break
+  pomodoro break 15                       15-min break
   pomodoro summary                        Today's summary
   pomodoro summary 2025-07-20             Specific date summary
   pomodoro week                           This week's summary
 
 EOF
+}
+
+start_break() {
+    local minutes=${1:-5}
+    local total_seconds=$((minutes * 60))
+    
+    echo "☕ Starting ${minutes}-min break"
+    
+    # Progress bar countdown
+    for ((i=total_seconds; i>=0; i--)); do
+        local percent=$(((total_seconds - i) * 100 / total_seconds))
+        local bars=$((percent / 2))
+        local spaces=$((50 - bars))
+        
+        printf "\r[%s%s] %d%% - %02d:%02d remaining" \
+            "$(printf '%*s' "$bars" | tr ' ' '~')" \
+            "$(printf '%*s' "$spaces")" \
+            "$percent" \
+            "$((i / 60))" \
+            "$((i % 60))"
+        
+        sleep 1
+    done
+    
+    echo ""
+    
+    # Play sound and notify
+    paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || \
+    paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &
+    notify-send -u normal "⏰ Break Over" "Time to get back to work!"
 }
 
 start_timer() {
@@ -128,6 +161,9 @@ show_week() {
 case "$1" in
     "help"|"-h"|"--help")
         show_help
+        ;;
+    "break")
+        start_break "$2"
         ;;
     "summary")
         show_summary "$2"
