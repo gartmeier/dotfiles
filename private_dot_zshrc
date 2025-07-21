@@ -36,3 +36,5 @@ bindkey -s ^f "tmux-sessionizer\n"
 # https://wiki.archlinux.org/title/Kitty#Terminal_issues_with_SSH
 [ "$TERM" = "xterm-kitty" ] && alias ssh="kitty +kitten ssh"
 
+# Pomodoro Functions
+source ~/.config/shell/pomodoro.sh
