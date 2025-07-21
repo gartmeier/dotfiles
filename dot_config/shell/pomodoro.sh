@@ -7,26 +7,38 @@
 pomodoro() {
     local minutes=${1:-25}
     local task="${2:-Focused work}"
-    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/pomodoro"
-    local logfile="$data_dir/pomodoro.log"
+    local logfile="$HOME/.pomodoro_log"
     local date=$(date '+%Y-%m-%d')
     local start_time=$(date '+%H:%M')
+    local total_seconds=$((minutes * 60))
     
-    # Create directory if it doesn't exist
-    mkdir -p "$data_dir"
+    echo "🍅 Starting ${minutes}-min pomodoro: $task"
     
-    echo "Starting ${minutes}-min pomodoro: $task"
-    
-    sleep $((minutes * 60)) && {
-        local end_time=$(date '+%H:%M')
+    # Progress bar countdown
+    for ((i=total_seconds; i>=0; i--)); do
+        local percent=$(((total_seconds - i) * 100 / total_seconds))
+        local bars=$((percent / 2))
+        local spaces=$((50 - bars))
         
-        # Log the completed pomodoro
-        echo "$date,$start_time,$end_time,$minutes,$task" >> "$logfile"
+        printf "\r[%s%s] %d%% - %02d:%02d remaining" \
+            "$(printf '%*s' "$bars" | tr ' ' '=')" \
+            "$(printf '%*s' "$spaces")" \
+            "$percent" \
+            "$((i / 60))" \
+            "$((i % 60))"
         
-        # Play sound and notify
-        paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &
-        notify-send -u critical "🍅 Pomodoro Complete" "$task finished!"
-    }
+        sleep 1
+    done
+    
+    echo ""
+    local end_time=$(date '+%H:%M')
+    
+    # Log the completed pomodoro
+    echo "$date,$start_time,$end_time,$minutes,$task" >> "$logfile"
+    
+    # Play sound and notify
+    paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &
+    notify-send -u critical "🍅 Pomodoro Complete" "$task finished!"
 }
 
 # Daily summary
