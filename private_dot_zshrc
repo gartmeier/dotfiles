@@ -1,3 +1,5 @@
+export VIRTUAL_ENV_DISABLE_PROMPT=1
+
 # Paths
 export BUN_INSTALL="$HOME/.bun"
 export LOCAL_BIN_PATH="$HOME/.local/bin"
@@ -10,7 +12,7 @@ export ZSH="$HOME/.oh-my-zsh"
 
 ZSH_THEME="joshua"
 
-plugins=(git terraform zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(auto-venv git terraform zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 

@@ -14,12 +14,18 @@ if [[ "$GNOME_THEME" == "'prefer-light'" ]]; then
     
     # Update tmux
     sed -i 's/latte/mocha/g' "$TMUX_CONFIG"
+
+    # Update Claude
+    claude config set -g theme light
 else
     # Update Gnome
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-light'
     
     # Update tmux
     sed -i 's/mocha/latte/g' "$TMUX_CONFIG"
+
+    # Update Claude
+    claude config set -g theme dark
 fi
 
 # Reload tmux config
