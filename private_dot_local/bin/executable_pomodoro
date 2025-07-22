@@ -1,6 +1,7 @@
 #!/bin/bash
 
 LOGFILE="$HOME/.pomodoro_log"
+PIDFILE="$HOME/.pomodoro_pid"
 
 show_help() {
     cat << EOF
@@ -9,6 +10,7 @@ Pomodoro Timer with Worklog
 Usage:
   pomodoro [minutes] [task description]   Start a pomodoro timer
   pomodoro break [minutes]                Start a break timer
+  pomodoro stop                           Stop current timer early
   pomodoro summary [date]                 Show daily summary
   pomodoro log [date]                     Show raw log for date
   pomodoro week [start_date]              Show weekly summary
@@ -19,6 +21,7 @@ Examples:
   pomodoro 15 "Code review"               15-min with custom task
   pomodoro break                          5-min break
   pomodoro break 15                       15-min break
+  pomodoro stop                           Stop current timer
   pomodoro summary                        Today's summary
   pomodoro summary 2025-07-20             Specific date summary
   pomodoro week                           This week's summary
@@ -26,30 +29,64 @@ Examples:
 EOF
 }
 
+cleanup() {
+    rm -f "$PIDFILE"
+    exit 0
+}
+
+stop_timer() {
+    if [[ ! -f "$PIDFILE" ]]; then
+        echo "No active pomodoro timer found."
+        return 1
+    fi
+
+    local pid=$(cat "$PIDFILE")
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "Timer process not found. Cleaning up..."
+        rm -f "$PIDFILE"
+        return 1
+    fi
+
+    # Send SIGTERM to stop the timer
+    kill -TERM "$pid" 2>/dev/null
+    rm -f "$PIDFILE"
+    echo "⏹️  Timer stopped."
+}
+
 start_break() {
+    if [[ -f "$PIDFILE" ]]; then
+        echo "Another timer is already running. Stop it first with 'pomodoro stop'"
+        return 1
+    fi
+
     local minutes=${1:-5}
     local total_seconds=$((minutes * 60))
+
+    echo "☕ Starting ${minutes}-min break (PID: $$)"
+    echo $$ > "$PIDFILE"
     
-    echo "☕ Starting ${minutes}-min break"
-    
+    # Set up signal handler for early termination
+    trap cleanup TERM INT
+
     # Progress bar countdown
     for ((i=total_seconds; i>=0; i--)); do
         local percent=$(((total_seconds - i) * 100 / total_seconds))
         local bars=$((percent / 2))
         local spaces=$((50 - bars))
-        
+
         printf "\r[%s%s] %d%% - %02d:%02d remaining" \
             "$(printf '%*s' "$bars" | tr ' ' '~')" \
             "$(printf '%*s' "$spaces")" \
             "$percent" \
             "$((i / 60))" \
             "$((i % 60))"
-        
+
         sleep 1
     done
-    
+
     echo ""
-    
+    rm -f "$PIDFILE"
+
     # Play sound and notify
     paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || \
     paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &
@@ -57,79 +94,162 @@ start_break() {
 }
 
 start_timer() {
+    if [[ -f "$PIDFILE" ]]; then
+        echo "Another timer is already running. Stop it first with 'pomodoro stop'"
+        return 1
+    fi
+
     local minutes=${1:-25}
     local task="${2:-Focused work}"
     local date=$(date '+%Y-%m-%d')
     local start_time=$(date '+%H:%M')
+    local start_timestamp=$(date +%s)
     local total_seconds=$((minutes * 60))
+
+    echo "🍅 Starting ${minutes}-min pomodoro: $task (PID: $$)"
+    echo $$ > "$PIDFILE"
     
-    echo "🍅 Starting ${minutes}-min pomodoro: $task"
-    
+    # Set up signal handler for early termination
+    trap 'handle_early_stop "$date" "$start_time" "$start_timestamp" "$task"' TERM INT
+
     # Progress bar countdown
     for ((i=total_seconds; i>=0; i--)); do
         local percent=$(((total_seconds - i) * 100 / total_seconds))
         local bars=$((percent / 2))
         local spaces=$((50 - bars))
-        
+
         printf "\r[%s%s] %d%% - %02d:%02d remaining" \
             "$(printf '%*s' "$bars" | tr ' ' '=')" \
             "$(printf '%*s' "$spaces")" \
             "$percent" \
             "$((i / 60))" \
             "$((i % 60))"
-        
+
         sleep 1
     done
-    
+
     echo ""
     local end_time=$(date '+%H:%M')
-    
+    rm -f "$PIDFILE"
+
     # Log the completed pomodoro
     echo "$date,$start_time,$end_time,$minutes,$task" >> "$LOGFILE"
-    
+
     # Play sound and notify
     paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &
     notify-send -u critical "🍅 Pomodoro Complete" "$task finished!"
 }
 
+handle_early_stop() {
+    local date="$1"
+    local start_time="$2"
+    local start_timestamp="$3"
+    local task="$4"
+    
+    echo ""
+    local end_time=$(date '+%H:%M')
+    local end_timestamp=$(date +%s)
+    local actual_minutes=$(( (end_timestamp - start_timestamp) / 60 ))
+    
+    # Only log if at least 1 minute has passed
+    if [[ $actual_minutes -ge 1 ]]; then
+        echo "$date,$start_time,$end_time,$actual_minutes,$task (stopped early)" >> "$LOGFILE"
+        echo "⏹️  Pomodoro stopped after $actual_minutes minutes and logged."
+    else
+        echo "⏹️  Pomodoro stopped (too short to log)."
+    fi
+    
+    cleanup
+}
+
 show_summary() {
     local date=${1:-$(date '+%Y-%m-%d')}
-    
+
     if [[ ! -f "$LOGFILE" ]]; then
         echo "No pomodoro log found."
         return
     fi
-    
+
     echo "📊 Pomodoro Summary for $date"
     echo "================================"
-    
+
     local today_entries=$(grep "^$date," "$LOGFILE")
-    
+
     if [[ -z "$today_entries" ]]; then
         echo "No pomodoros completed on $date."
         return
     fi
-    
+
     local total_pomodoros=$(echo "$today_entries" | wc -l)
     local total_minutes=$(echo "$today_entries" | cut -d',' -f4 | awk '{sum+=$1} END {print sum}')
-    
+
     echo "Total pomodoros: $total_pomodoros"
     echo "Total time: $total_minutes minutes ($(echo "scale=1; $total_minutes/60" | bc 2>/dev/null || echo "$((total_minutes/60))")h)"
     echo ""
     echo "Tasks completed:"
-    echo "$today_entries" | while IFS=',' read -r date start end mins task; do
-        echo "  • $start-$end ($mins min): $task"
+    
+    # Create associative arrays to store task data
+    declare -A task_minutes
+    declare -A task_count
+    declare -A task_sessions
+    
+    # Process each entry
+    while IFS=',' read -r date start end mins task; do
+        # Normalize task name (remove trailing "(stopped early)" if present)
+        local normalized_task=$(echo "$task" | sed 's/ (stopped early)$//')
+        
+        # Update totals
+        task_minutes["$normalized_task"]=$((${task_minutes["$normalized_task"]:-0} + mins))
+        task_count["$normalized_task"]=$((${task_count["$normalized_task"]:-0} + 1))
+        
+        # Add session info
+        if [[ -z "${task_sessions["$normalized_task"]}" ]]; then
+            task_sessions["$normalized_task"]="$start-$end"
+        else
+            task_sessions["$normalized_task"]="${task_sessions["$normalized_task"]}, $start-$end"
+        fi
+    done <<< "$today_entries"
+    
+    # Sort tasks by name and display
+    local sorted_tasks=($(printf '%s\n' "${!task_minutes[@]}" | sort))
+    
+    for task in "${sorted_tasks[@]}"; do
+        local mins=${task_minutes["$task"]}
+        local count=${task_count["$task"]}
+        local sessions=${task_sessions["$task"]}
+        
+        # Format time display
+        if [[ $mins -ge 60 ]]; then
+            local hours=$((mins / 60))
+            local remaining_mins=$((mins % 60))
+            if [[ $remaining_mins -eq 0 ]]; then
+                local time_display="${hours}h"
+            else
+                local time_display="${hours}h ${remaining_mins}m"
+            fi
+        else
+            local time_display="${mins} min"
+        fi
+        
+        # Display task with count if more than 1 session
+        if [[ $count -gt 1 ]]; then
+            echo "  • $task: $time_display ($count sessions)"
+            echo "    Sessions: $sessions"
+        else
+            echo "  • $task: $time_display"
+            echo "    Session: $sessions"
+        fi
     done
 }
 
 show_log() {
     local date=${1:-$(date '+%Y-%m-%d')}
-    
+
     if [[ ! -f "$LOGFILE" ]]; then
         echo "No pomodoro log found."
         return
     fi
-    
+
     echo "Raw log for $date:"
     echo "Date,Start,End,Minutes,Task"
     echo "=========================="
@@ -138,21 +258,21 @@ show_log() {
 
 show_week() {
     local start_date=${1:-$(date -d 'monday' '+%Y-%m-%d' 2>/dev/null || date '+%Y-%m-%d')}
-    
+
     if [[ ! -f "$LOGFILE" ]]; then
         echo "No pomodoro log found."
         return
     fi
-    
+
     echo "📈 Weekly Summary starting $start_date"
     echo "======================================"
-    
+
     for i in {0..6}; do
         local check_date=$(date -d "$start_date + $i days" '+%Y-%m-%d' 2>/dev/null || echo "$start_date")
         local day_name=$(date -d "$check_date" '+%A' 2>/dev/null || echo "Day $((i+1))")
         local count=$(grep "^$check_date," "$LOGFILE" 2>/dev/null | wc -l)
         local minutes=$(grep "^$check_date," "$LOGFILE" 2>/dev/null | cut -d',' -f4 | awk '{sum+=$1} END {print sum+0}')
-        
+
         printf "%-10s: %2d pomodoros (%3d min)\n" "$day_name" "$count" "$minutes"
     done
 }
@@ -164,6 +284,9 @@ case "$1" in
         ;;
     "break")
         start_break "$2"
+        ;;
+    "stop")
+        stop_timer
         ;;
     "summary")
         show_summary "$2"
