@@ -25,6 +25,11 @@ alias tfa="terraform apply tfplan"
 alias tfp="terraform plan -out tfplan"
 alias tt="toggle-theme"
 
+# Radio SRF Virus
+# https://www.srf.ch/sendetechnik-sendetechnik-live-radio-im-internet
+alias radio_srf3="mpv http://stream.srg-ssr.ch/drs3/mp3_128.m3u"
+alias radio_srfvirus="mpv http://stream.srg-ssr.ch/drsvirus/mp3_128.m3u"
+
 # Shell Completions
 [ -s "/home/joshua/.bun/_bun" ] && source "/home/joshua/.bun/_bun"
 
