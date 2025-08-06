@@ -12,9 +12,13 @@ export ZSH="$HOME/.oh-my-zsh"
 
 ZSH_THEME="joshua"
 
-plugins=(auto-venv git terraform zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(auto-venv git kubectl terraform zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
+
+# History configuration
+unsetopt share_history
+setopt inc_append_history
 
 # User configuration
 export EDITOR=nvim
