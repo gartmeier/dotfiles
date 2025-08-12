@@ -28,6 +28,7 @@ alias open="xdg-open"
 alias tfa="terraform apply tfplan"
 alias tfp="terraform plan -out tfplan"
 alias tt="toggle-theme"
+alias killxdg="systemctl --user restart xdg-desktop-portal; systemctl --user restart xdg-desktop-portal-gnome"
 
 # Radio SRF Virus
 # https://www.srf.ch/sendetechnik-sendetechnik-live-radio-im-internet
