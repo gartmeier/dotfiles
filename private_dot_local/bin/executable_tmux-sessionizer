@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+selected=$(tmux ls -F "#{session_name}" | sort -r | fzf)
+tmux switch-client -t "$selected"
