@@ -42,8 +42,8 @@ alias radio_srfvirus="mpv http://stream.srg-ssr.ch/drsvirus/mp3_128.m3u"
 # Zoxide
 eval "$(zoxide init --cmd cd zsh)"
 
-# Sessionizer
-bindkey -s ^f "tmux-sessionizer\n"
+# # Sessionizer
+# bindkey -s ^f "tmux-sessionizer\n"
 
 # Starship prompt
 eval "$(starship init zsh)"
